@@ -1,0 +1,11 @@
+{
+	"id": "properties-in-export",
+	"name": "Properties in Export",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Display YAML frontmatter properties in exported documents.",
+	"author": "Greg Potts",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}
