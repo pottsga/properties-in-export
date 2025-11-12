@@ -41,6 +41,7 @@ export default class MyPlugin extends Plugin {
 		// Inject properties block at the top of the document during export (PDF)
 		this.registerMarkdownPostProcessor((element, context) => {
 			if (!this.settings.displayProperties) return;
+
 			const file = this.currentFile ?? this.app.workspace.getActiveFile();
 			if (!file) return;
 			const cache = this.app.metadataCache.getFileCache(file);
@@ -58,7 +59,12 @@ export default class MyPlugin extends Plugin {
 			const block = document.createElement('div');
 			block.className = 'export-properties-block';
 			block.innerHTML = table;
-			element.insertBefore(block, element.firstChild);
+			const contentContainer = element.querySelector('.cm-contentContainer');
+			if (contentContainer) {
+				element.insertBefore(block, contentContainer);
+			} else {
+				element.insertBefore(block, element.firstChild);
+			}
 		});
 
 		// Also set current file immediately if one is active on load

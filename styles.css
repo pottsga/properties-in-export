@@ -16,3 +16,7 @@ If your plugin does not need CSS, delete this file.
   border-collapse: collapse !important;
 }
 */
+
+.popover.hover-popover .export-properties-block {
+  display: none;
+}
