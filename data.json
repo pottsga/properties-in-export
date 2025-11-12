@@ -1,5 +1,7 @@
 {
   "displayProperties": true,
+  "dateFormat": "yyyy-MM-dd hhmm a",
+  "excludedProperties": "aliases",
   "omittedProperties": "Covers,cssclasses",
   "insertAfterHeading": true
 }
