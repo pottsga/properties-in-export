@@ -5,12 +5,14 @@ interface PluginSettings {
 	displayProperties: boolean;
 	dateFormat: string;
 	excludedProperties: string;
+	addPropertiesBlockAfterHeading: boolean;
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
 	displayProperties: true,
 	dateFormat: 'yyyy-MM-dd',
 	excludedProperties: '',
+	addPropertiesBlockAfterHeading: false,
 }
 
 export default class MyPlugin extends Plugin {
@@ -37,9 +39,16 @@ export default class MyPlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on('file-open', (file) => {
 			this.currentFile = file;
 		}));
-		
+
 		// Inject properties block at the top of the document during export (PDF)
 		this.registerMarkdownPostProcessor((element, context) => {
+			// Only render if element is <div class="markdown-preview-view markdown-rendered show-properties">
+			if (!(
+				element.classList.contains('markdown-preview-view') &&
+				element.classList.contains('show-properties')
+			)) {
+				return;
+			}
 			if (!this.settings.displayProperties) return;
 
 			const file = this.currentFile ?? this.app.workspace.getActiveFile();
@@ -60,6 +69,18 @@ export default class MyPlugin extends Plugin {
 			block.className = 'export-properties-block';
 			block.innerHTML = table;
 			const contentContainer = element.querySelector('.cm-contentContainer');
+			
+			if (this.settings.addPropertiesBlockAfterHeading) {
+				// Find the first heading (h1..h6) within the rendered element (prefer inside contentContainer)
+				const searchRoot = contentContainer ?? element;
+				const firstHeading = searchRoot.querySelector('h1,h2,h3,h4,h5,h6');
+				if (firstHeading && firstHeading.parentNode) {
+					// Insert the block immediately after the heading
+					firstHeading.parentNode.insertBefore(block, firstHeading.nextSibling);
+					return;
+				}
+			}
+			// Fallback: insert at top (before content container if present, otherwise as first child)
 			if (contentContainer) {
 				element.insertBefore(block, contentContainer);
 			} else {
@@ -97,7 +118,7 @@ export default class MyPlugin extends Plugin {
 
 	// Helper to escape HTML
 	escapeHtml(str: string): string {
-		return str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}[tag] || tag));
+		return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\'': '&#39;', '"': '&quot;' }[tag] || tag));
 	}
 
 	// Helper to format property values
@@ -128,9 +149,9 @@ export default class MyPlugin extends Plugin {
 			.join('');
 	}
 	isDateValue(val: unknown): boolean {
-	if (typeof val !== 'string') return false;
-	// Match ISO date (yyyy-mm-dd) and ISO datetime (yyyy-mm-ddThh:mm, yyyy-mm-ddThh:mm:ss, etc)
-	return /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|([+-]\d{2}:\d{2}))?)?$/.test(val);
+		if (typeof val !== 'string') return false;
+		// Match ISO date (yyyy-mm-dd) and ISO datetime (yyyy-mm-ddThh:mm, yyyy-mm-ddThh:mm:ss, etc)
+		return /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|([+-]\d{2}:\d{2}))?)?$/.test(val);
 	}
 }
 
@@ -176,6 +197,18 @@ class SettingTab extends PluginSettingTab {
 					this.plugin.settings.excludedProperties = value;
 					await this.plugin.saveSettings();
 				}));
+		
+		// Flag to add properties block after the first heading (if it exists). Otherwise, at the top of the document.
+		new Setting(containerEl)
+			.setName('Add properties block after first heading?')
+			.setDesc('Whether to insert the properties block after the first heading in the exported document')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.addPropertiesBlockAfterHeading)
+				.onChange(async (value) => {
+					this.plugin.settings.addPropertiesBlockAfterHeading = value;
+					await this.plugin.saveSettings();
+				}));
+
 	}
 }
 
